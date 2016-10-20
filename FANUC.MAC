@@ -1,0 +1,147 @@
+@pre_processor
+    ;Internal parms
+    machine_type          = MILLING
+    post_processor        = fanuc
+
+    ;Machine Initialize
+    machine_plane         = XY
+    z_with_xy             = Y
+    mac_axes              = XYZ
+    num_axes              = 4
+    num_simult_axes       = 4
+    abs_coord             = N
+    rotate                = Y
+    mirror                = Y
+    variables             = Y
+    loops                 = Y
+
+    ;Program numbers
+    prog_num_min          = 5000
+    prog_num_max          = 8999
+    prog_num_dflt         = 5000
+    get_prog_num          = Y
+    proc_num_min          = 1
+    proc_num_max          = 8999
+    proc_num_dflt         = 1
+    get_proc_num          = Y
+
+    ;Procedures control
+    full_gcode            = N
+    gen_procs             = N
+    drill_proc            = N
+    turn_proc             = Y
+    thread_proc           = Y
+    gen_internal_proc     = N
+    turn_common_proc      = Y
+    gen_1_line_proc       = Y
+    optimize_jobs_loop    = Y
+    G_in_2_cols           = Y
+
+    ;Home
+    num_homes             = 6
+    dflt_home             = 1
+    get_job_home          = N
+    abs_zero_chng         = Y
+
+    ;Positioning
+    dflt_start            = 0.0000 200.0000 100.0000, 0.0000 7.8740 3.9370
+    dflt_end              = 0.0000 200.0000 0.0000, 0.0000 7.8740 0.0000
+    set_z_chng            = Y
+    dflt_tool_chng        = 0.0000 0.0000 0.0000, 0.0000 0.0000 0.0000
+
+    ;Compensation
+    comp_exist            = Y N
+    comp_arc_arc          = Y
+    comp_arc_line         = Y
+    comp_line_line        = Y
+    next_angle            = N
+    comp_x_start          = N
+    comp_by_arcs          = N
+    chng_tool_table       = N
+    look_forward          = 2
+
+    ;Arc definitions
+    arc_exist             = Y
+    arc_3d                = Y
+    arc_quadrants         = N
+    arc_gt_180            = Y
+    arc_max_chord         = 30.0000, 1.1811
+    arc_max_angle         = 10.0000
+    arc_max_radius        = 2000.0000, 78.7402
+
+    ;Epsilon values
+    eps_angle             = 0.0020, 0.0001
+    eps_line              = 0.0010, 0.00004
+    zero_value            = 0.0010, 0.00004
+    min_delt_arc_rad      = 0.0100, 0.0004
+    safety_dist           = 2.0000, 0.0787
+
+    ;Feed-Spin
+    rapid_feed            = 18000.0000, 196.8503
+    max_spin              = 22000.0000
+    max_feed              = 22000.0000, 236.2205
+    spin_direction        = CW
+
+    ;Timing
+    time_factor           = 1.0000
+    block_time            = 0.2000
+    change_tool_time      = 15.0000
+
+	;Coolant
+	mist_coolant          = Y 
+	
+    ;Part options
+    options               = COLENT INTEGER
+    ;Job options
+    job_opt_type          = OPT1 Y   DELY  FEAD  MIST
+    ;Drill cycles
+    drill_type            = Drilling Drilling Y
+    drill_type            = F_Drill F_Drill Y   Delay
+    drill_type            = Peck Peck Y   Delay
+    drill_type            = Tapping Tapping Y
+    drill_type            = Boring Boring Y   Delay
+    drill_type            = R_Boring R_Boring Y   Delay
+    drill_type            = F_Boring F_Boring Y   Delay
+    ;Turning cycles
+
+    ;Threading cycles
+
+    ;Grooving cycles
+
+    ;Wire Cut cycles
+
+    ;Turning definitions
+    turning_cycle         = Y N
+    groove_cycle          = Y N
+    combined_cycles       = N
+    optimize_cycle        = N
+    finish_retreat        = N
+    semi_finish_retreat   = N
+    fanuc_cycle           = Y
+
+    ;Fourth axis
+    indexial_4th_axis     = N
+    indexial_increment    = 0.0000, 0.0000
+    init_cpos             = Y
+    polar_4x              = N
+    cartez_4x             = N
+    set_dir               = N
+
+    ;Wire Cut parameters
+    lower_guide_level     = 0.0000, 0.0000
+    group_def             = N
+    offset_group_name     =
+    wc_pos_proc           = Y
+    u_max                 = 100.0000, 3.9370
+    v_max                 = 100.0000, 3.9370
+    xy_abs                = Y
+    uv_abs                = N
+
+    ;GCTOOL
+    int_is_illegal        = N
+    devision_factor       = 1000.0000
+    gc_procs_file_name    = NO_FILE
+    change_tool_at_ref    = Y
+	
+endp
+

@@ -1,0 +1,616 @@
+;                 ; FANUC
+; -----
+;
+@init_post
+    global string tool_diameter_f
+    global numeric flag1 flag2 m_feed_flag
+	global logical Pstart_flag
+	global string tstr 
+	global string date_mark
+	global string time_mark
+	global string PID
+	global string used_tools<<100>>
+	global integer cur_tool cur_o_number
+	global integer tools_num
+
+    ; Non GPPL variables
+    num_user_procs =    1
+    line_labels    = FALSE     ; Jump to N...
+	; Touchoff button position
+	;tob_posX = 111.111
+	;tob_posY = 222.222
+	;tob_posZ = 333.333
+	
+
+    ; GPPL variables
+    pre_processor   = 'FANUC'
+    numeric_def_f   = '5.3'
+    integer_def_f   = '5.0(p)'
+    gcode_f         = '2.0(p)'
+    mcode_f         = '2.0(p)'
+    xpos_f          = '5.3'
+    ypos_f          = '5.3'
+    zpos_f          = '5.3'
+    feed_f          = '4.3(p)'
+    tool_diameter_f = '5.3/1'
+    blknum_f        = '5.0(p)'
+    blknum_gen      = false
+    blknum_exist    = true
+    blknum          =    1
+    blknum_delta    =    1
+    blknum_max      = 32000
+	;PID = 12345678901234
+	cur_tool = 1
+	tools_num = 0
+;   trace 'all':5
+endp
+
+;-------------------
+
+@start_of_file
+    ; before tools definition
+    ;{'%'}
+    {'(', g_file_name, ')'}
+    {nl, '(',DATE ')'}
+	{nl}
+	{nl, '#12=1  (задание кол-ва повторов по X)'}
+	{nl, '#13=0  (задание смещения по X мм)'}
+	{nl}
+	{nl, '#14=1  (задание кол-ва повторов по Y)'}
+	{nl, '#15=0  (задание смещения по Y мм)'}
+	
+    if rotate_used then
+        gcode = 69
+        {nb, 'G'gcode}
+    endif
+    if mirror_used then
+        {nb, 'G50.1 X0 Y0'}
+    endif
+    ;rev{nb, '(SUBROUTINES: O'first_proc_number, ' .. O'last_proc_number, ')'}
+	{nl}
+    flag2 = 0
+	Pstart_flag = 1
+	
+	cur_o_number = 105	; cur number of procedure
+
+	
+endp
+
+;-------------------
+
+@start_program
+    ; after tools definition
+	{nb, ' G21 G49 G0  ( ABS mm clr_Z_offset rapid_motion )' }
+;   call @home_number
+endp
+
+;-------------------
+
+@end_program
+	{nl}
+	{nl, 'g0 x0 y0  (В конце программы повтора на 0 координат!)'}
+	{nl, 'g92 x-#13 (Сдвиг по X)'}
+	;cur_o_number = cur_o_number + 1
+	{nl, 'o', cur_o_number, ' endrepeat'}
+	{nl, 'g92.1 (Отмена офсетов по G92)'}
+	{nl, 'g90'}
+	{nl, 'g92 y-#15 (Сдвиг по Y)'}
+	cur_o_number = cur_o_number + 1
+	{nl, 'o', cur_o_number, ' endrepeat'}
+	{nl, 'g92.1   (Отмена офсетов по G92)'}
+	{nl, 'g90'}
+	;cur_o_number = cur_o_number + 1
+	
+
+	;{nl, '#31 = ', PID}
+	;{nl, '#32 = 1'}
+    {nl, 'M30'}
+endp
+
+;-------------------
+
+@end_of_file
+    ;{nl, '%'}
+	{nl, '(  ===========================================  )'}
+	{nl, '(        ИНСТРУМЕНТОВ ', tools_num,' шт.                  )'}
+	cur_tool = 1
+	while cur_tool <= tools_num
+		{nl, '(', used_tools<<cur_tool>> };,')'}
+		cur_tool = cur_tool + 1
+	endw
+	{nl, '(  ===========================================  )'}
+	{nl}
+	{nl, '(      Processed by postprocessor v.1.03        )'}
+	{nl, '(               ©GSElabs, 2013                  )'}
+	{nl, '(          https://github.com/G-S-E             )'}
+endp          
+
+;-------------------
+
+@relative_mode
+    gcode = 91
+    {nb, 'G'gcode, ' '}
+    skipline = FALSE
+endp
+
+;-------------------
+
+@absolute_mode
+    gcode = 90
+    {nb, 'G'gcode, ' '}
+    skipline = FALSE
+endp
+
+;-------------------
+
+@machine_plane
+    if machine_plane eq XY
+        gcode = 17
+    endif
+    if machine_plane eq YZ
+        gcode = 18
+    endif
+    if machine_plane eq ZX
+        gcode = 19
+    endif
+    ;{nb, 'G'gcode}
+endp
+
+;-------------------
+
+@call_proc
+    if active(parm1) then
+        gcode = 65
+        {nb, 'G'gcode, ' P'label}
+        {' A'parm1, [' B'parm2], [' C'parm3]}
+    else
+        {nb, 'M98 P'label}
+    endif
+    if proc_count gt 1 then
+        {' L'proc_count}
+    endif
+    {[' ('message, ')']}
+endp
+
+;-------------------
+
+@proc
+    {nl, 'O'label}
+endp
+
+;-------------------
+
+@end_proc
+  if dely eq 1
+    {' G64 '}
+  endif
+    {nb, 'M99'}
+endp
+
+;----------------
+
+@loop
+    local integer var_num
+
+    var_num = loop_level + 20
+    {nb, '#', var_num, ' = 0'}
+    {nb, 'WHILE [#', var_num, ' LT ', loop_count, '] DO ', loop_level}
+endp
+
+;----------------
+
+@end_loop
+    local integer var_num
+
+    var_num = loop_level + 20
+    {nb '#', var_num, ' = #', var_num, ' + 1'}
+    {nb 'G'home_number}
+    {nb 'END ', loop_level}
+endp
+
+;----------------
+
+@def_tool
+;;;    {nb, '(G10 L12 P', (tool_number+50), ' R'tool_offset, ')'}
+endp
+
+;-------------------
+
+@rapid_move
+    {nb}
+    gcode = 0
+    if change(gcode) then
+        {'G'gcode}
+    else
+        {'  '}
+    endif
+    {[' X'xpos], [' Y'ypos], [' Z'zpos]}
+;   if flag1 eq 1
+;   {' S'spin:'5.0(p)',' M03'}
+;   {nb, 'M08'}
+;   endif
+;   flag1 = 0
+endp
+
+;-------------------
+
+@line
+    {nb}
+    gcode = 1
+    if change(gcode) then
+        {'G'gcode}
+    else
+        {'  '}
+    endif
+    {[' X'xpos], [' Y'ypos], [' Z'zpos]}
+   if m_feed_flag eq 1
+      m_feed_flag = 0
+      { ' F'feed}
+   else
+      { [' F'feed]}
+   endif
+endp
+
+;-------------------
+
+@arc
+    {nb}
+
+    if arc_direction eq CCW then
+        gcode = 3
+    else         ; CW
+        gcode = 2
+    endif
+    if change(gcode) then
+        {'G'gcode}
+    else
+        {'  '}
+    endif
+    {[' X'xpos] [' Y'ypos] [' Z'zpos]}
+
+    if arc_size eq 360 then
+        if arc_plane eq XY then
+            {' I'xcenter_rel, ' J'ycenter_rel}
+        endif
+        if arc_plane eq YZ then
+            {' J'xcenter_rel, ' K'ycenter_rel}
+        endif
+        if arc_plane eq ZX then
+            {' K'xcenter_rel, ' I'ycenter_rel}
+        endif
+    else
+        if arc_size >= 180 then
+            radius = -radius
+        endif
+        {' R'radius}
+    endif
+   if m_feed_flag eq 1
+      m_feed_flag = 0
+      { ' F'feed}
+   else
+      { [' F'feed]}
+   endif
+
+endp
+
+;-------------------
+
+@compensation
+    if side eq COMP_LEFT then
+        gcode = 41
+    endif
+    if side eq COMP_RIGHT then
+        gcode = 42
+    endif
+    if side eq COMP_OFF then
+        gcode = 40
+    endif
+    {nb, 'G'gcode, ' '}
+    skipline = FALSE
+endp
+
+;-------------------
+
+@delay
+    gcode = 4
+    {nb 'G'gcode, ' P'delay_period:integer_def_f}
+endp
+
+;-------------------
+
+@change_ref_point
+    ; Given in absolute mode
+    gcode = 10
+    {nb, 'G'gcode, 'G91 L2 P'home_number ' X'xhome, ' Y'yhome, ' Z'zhome}
+    {nb,'G90'}
+endp
+
+;-------------------
+
+@home_number
+    ;gcode = 53 + home_number
+    ;{nb, 'G'gcode}
+    flag2 = 1
+endp
+
+;-------------------
+
+@rotate
+    ; Not exist in FANUC 6M
+    if rotate_cancel then
+        gcode = 69
+        {nb, 'G'gcode}
+    else
+        gcode = 68
+        {nb, 'G'gcode, ' x0 y0 G91 R'angle}
+        {nb, 'G90'}
+    endif
+endp
+
+;-------------------
+
+@fourth_axis
+    gcode = 0
+    {nb, 'G'gcode, ' A'angle}
+endp
+
+;-------------------
+
+@change_tool
+	if Pstart_flag eq 1	; on start iteration
+		;Pstart_flag = 0
+		
+	else
+		{nl}
+		{nl, 'g0 x0 y0  (В конце программы повтора на 0 координат!)'}
+		{nl, 'g92 x-#13 (Сдвиг по X)'}
+		;cur_o_number = cur_o_number + 1
+		{nl, 'o', cur_o_number, ' endrepeat'}
+		{nl, 'g92.1 (Отмена офсетов по G92)'}
+		{nl, 'g90'}
+		{nl, 'g92 y-#15 (Сдвиг по Y)'}
+		cur_o_number = cur_o_number + 1
+		{nl, 'o', cur_o_number, ' endrepeat'}
+		{nl, 'g92.1   (Отмена офсетов по G92)'}
+		{nl, 'g90'}
+		cur_o_number = cur_o_number + 1
+	endif
+	
+	
+	tstr = '(MSG, Установи T' + tostr(tool_number)
+	if tool_type eq 0 then
+	 tstr = tstr +  ' - СВЕРЛО  D=' + tostr(tool_diameter) + 'MM )'
+	endif
+	if tool_type eq 1 then
+	 tstr = tstr +  ' РАДИУСНАЯ ФРЕЗА  D=' + tostr(tool_diameter) + 'MM, R=' + tostr(corner_radius) + ' MM)'
+	endif
+	if tool_type eq 2 then
+	 tstr = tstr + ' ФРЕЗА  D=' + tostr(tool_diameter) + 'MM, R=' + tostr(corner_radius) + ' MM)'
+	endif
+	if tool_type eq 3 then
+	 tstr = tstr + ' ТИП 3  D=' + tostr(tool_diameter) + 'MM, R=' + tostr(corner_radius) + ' MM)'
+	endif
+	if tool_type eq 4 then
+	 tstr = tstr + ' ТИП 4  D=' + tostr(tool_diameter) + 'MM, R=' + tostr(corner_radius) + ' MM)'
+	endif
+	if tool_type eq 5 then
+	 tstr = tstr + ' ТИП 5  D=' + tostr(tool_diameter) + 'MM, R=' + tostr(corner_radius) + ' MM)'
+	endif
+	if tool_type eq 6 then
+	 tstr = tstr + ' ТИП 6  D=' + tostr(tool_diameter) + 'MM, R=' + tostr(corner_radius) + ' MM)'
+	endif
+	if tool_type eq 7 then
+	 tstr = tstr + ' ТИП 7  D=' + tostr(tool_diameter) + 'MM, R=' + tostr(corner_radius) + ' MM)'
+	endif
+	if tool_type eq 18 then
+	 tstr = tstr + ' - СВЕРЛО ЦЕНТРОВОЧНОЕ  D='+ tostr(tool_diameter) + ' MM  R'+ tostr(corner_radius)+' MM)'
+	endif
+	if tool_type eq 15 then
+	 tstr = tstr + ' - ФРЕЗА СФЕРИЧЕСКАЯ  D='+ tostr(tool_diameter) + ' MM  R'+ tostr(corner_radius)+' MM)'
+	endif	
+	{nl}
+	{nl, tstr}
+	used_tools<<tools_num+1>> = substr(tstr,15,strlen(tstr))
+	
+	tools_num = tools_num + 1
+	
+	; MIST coolant off
+	{nl, 'M9 (turn all coolant off)'}
+	
+	if Pstart_flag eq 1	; on start iteration
+		Pstart_flag = 0
+		{nl, 'o100 call (o100 - первый замер, o101 - следующий замер.)'}
+		;{nl, '(o101 call)'}
+	else
+		{nl, 'o101 call'}
+	endif
+	
+	; turn-on MIST coolant if needed
+	if MIST eq 0
+		;NOP
+	else
+		{nl, 'M7 (turn mist coolant on)'}
+	endif
+	
+	{nl}
+	cur_o_number = cur_o_number + 1
+	{nl, 'o', cur_o_number, ' repeat [#14]  (Повтор ... раз по Y)'}
+	cur_o_number = cur_o_number - 1
+	{nl, 'o', cur_o_number, ' repeat [#12]  (Повтор ... раз по X)'}
+	{nl}
+	
+	tool_direction = CW
+	call @start_tool
+	{nl}
+	xpos = xnext
+	ypos = ynext
+	zpos = znext
+	skipline = FALSE
+	call @rapid_move
+
+endp
+
+;-------------------
+
+@new_tool
+    {nb, '(', message, ')'}
+endp
+
+;-------------------
+
+@message
+    {nb, '(', message, ')'}
+endp
+
+;-------------------
+
+@drill
+    call @rapid_move
+
+    if drill_type eq drilling then
+        gcode = 81
+    endif
+    if drill_type eq f_drill then
+        gcode = 82
+    endif
+    if drill_type eq peck then
+        gcode = 83
+    endif
+    if drill_type eq tapping then
+        gcode = 84
+    endif
+    if drill_type eq boring then
+        gcode = 85
+    endif
+    if drill_type eq r_boring then
+        gcode = 86
+    endif
+    if drill_type eq f_boring then
+        gcode = 89
+    endif
+    if drill_type eq tapping then
+    {nb,'M29 S'spin:integer_def_f}
+    endif
+    {nb,'G98 G'gcode, ' Z'drill_lower_z, ' R'drill_upper_z}
+    if drill_type eq peck then
+        {' Q'down_step}
+    endif
+    if drill_type eq f_drill or drill_type eq tapping then
+        {' P'delay:integer_def_f}
+    endif
+    {' F'feed}
+
+endp
+
+;-------------------
+
+@drill_point
+    if not first_drill then
+        {nb, '   ', [' X'xpos], [' Y'ypos], [' Z'zpos]}
+    endif
+endp
+
+;-------------------
+
+@mirror
+    if mirror_type eq MIRROR_OFF then
+        {nb, 'G50.1 X0 Y0'}
+    else
+        {nb, 'G51.1 '}
+        if mirror_type eq MIRROR_X then
+            {'X1 Y0'}
+        endif
+        if mirror_type eq MIRROR_Y then
+            {'X0 Y1'}
+        endif
+        if mirror_type eq MIRROR_XY then
+            {'X1 Y1'}
+        endif
+    endif
+endp
+
+;-------------------
+
+@end_drill
+    gcode = 80
+    {nb, 'G'gcode}
+endp
+
+;-------------------
+
+@halt_program
+    {' M0'}
+endp
+
+;--------------------
+
+@round_comp
+    ; NOP
+endp
+
+;--------------------
+
+@start_of_job
+
+  if dely eq 1
+    {nb, 'G61'}
+  endif
+; flag1 = 1
+endp
+
+;--------------------
+
+@end_of_job
+    ; NOP
+endp
+
+;--------------------
+
+@assign_axis
+    ;   TBD
+endp
+
+;     =======================
+;     USER DEFINED PROCEDURES
+;     =======================
+
+@call_simple_proc
+    active(message) = FALSE
+    active(parm1)   = FALSE
+    active(parm2)   = FALSE
+    active(parm3)   = FALSE
+    proc_count      = 1
+    call @call_proc
+endp
+
+;-------------------
+
+@start_tool
+    if tool_direction eq CW then
+        mcode = 3
+    else              ;  CCW
+        mcode = 4
+    endif
+    {nl , 'S'spin:integer_def_f, ' M'mcode}
+endp
+
+
+;-------------------
+
+@m_feed_spin
+;     if tool_direction eq CW then
+;        mcode = 4
+;     else              ;  CCW
+;         mcode = 3
+;     endif
+;     if change(spin)
+;     {nb,'S'spin:integer_def_f, ' M'mcode}
+;     endif
+;     m_feed_flag = 1
+endp
+
+;-------------------
+
+@stop_tool
+;   {' M5'}
+endp
