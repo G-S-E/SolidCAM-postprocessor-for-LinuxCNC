@@ -1,5 +1,7 @@
 # SolidCAM-postprocessor-for-LinuxCNC
 
+Postprocessor for SolidCAM to generate g-code programms supported by LinuxCNC.
+
 Features:
  - up to 4 axis
  - mist coolant
